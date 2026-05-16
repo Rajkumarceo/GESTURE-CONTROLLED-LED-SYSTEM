@@ -42,7 +42,7 @@ class WebSocketManager:
                 
         self.loop.run_until_complete(run_server())
 
-    async def _handler(self, websocket, path=None):
+    async def _handler(self, websocket):
         self.clients.add(websocket)
         try:
             while True:
@@ -109,9 +109,7 @@ class SerialManager:
 class HandController:
     def __init__(self, base_confidence=0.7):
         self.base_confidence = base_confidence
-        self.current_confidence = base_confidence
         self.hands = self._init_model(self.base_confidence)
-        self.last_brightness = -1
 
     def _init_model(self, confidence):
         base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
@@ -127,14 +125,6 @@ class HandController:
     def process(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         brightness = np.mean(gray)
-        
-        if self.last_brightness == -1 or abs(brightness - self.last_brightness) > 30:
-            target_confidence = np.clip(self.base_confidence * (brightness / 120.0), 0.4, 0.9)
-            if abs(target_confidence - self.current_confidence) > 0.15:
-                self.hands.close()
-                self.current_confidence = target_confidence
-                self.hands = self._init_model(self.current_confidence)
-                self.last_brightness = brightness
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
